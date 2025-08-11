@@ -1,0 +1,2027 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Ordem de Pagamento</title>
+    <!-- Importa a fonte Poppins do Google Fonts para um visual moderno -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- jsPDF e jspdf-autotable para exportação de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <!-- SheetJS (xlsx) para exportação de Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* Modern Base Styles */
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #ECF0F1; /* Light Gray Background */
+            color: #34495E; /* Dark Gray Text */
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px; /* Aumentado para acomodar mais colunas */
+            margin: 20px auto;
+            background-color: #FFFFFF; /* White Card Background */
+            padding: 30px 40px; /* Increased padding */
+            border-radius: 12px; /* More rounded corners */
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); /* Softer, more pronounced shadow */
+            overflow-x: auto; /* Adicionado para permitir scroll horizontal em telas menores */
+        }
+
+        h1 {
+            color: #2C3E50; /* Darker Blue-Gray for main titles */
+            text-align: center;
+            margin-bottom: 35px; /* Increased margin */
+            padding-bottom: 18px; /* Increased padding */
+            border-bottom: 2px solid #E0E0E0; /* Subtle border */
+            font-weight: 600;
+        }
+
+        .section-title {
+            color: #34495E;
+            margin-top: 35px; /* Increased margin */
+            margin-bottom: 20px;
+            font-size: 1.4em; /* Larger font size */
+            border-bottom: 1px solid #E0E0E0;
+            padding-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .section-subtitle h3 {
+            color: #4A90E2; /* Primary Blue for subtitles */
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.15em;
+            font-weight: 500;
+        }
+
+        /* Form Styles */
+        .payment-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px; /* Increased gap */
+            margin-bottom: 30px;
+            padding: 25px;
+            background-color: #F9F9F9; /* Lighter background for form section */
+            border-radius: 10px;
+            border: 1px solid #E0E0E0;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: 500; /* Consistent font-weight */
+            color: #555;
+            font-size: 1em; /* Consistent font-size */
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="password"],
+        .form-group input[type="date"],
+        .form-group input[type="number"],
+        .form-group select,
+        .form-group textarea,
+        .form-group input[type="file"],
+        .filter-input { /* Added filter input styling */
+            padding: 12px 15px; /* More padding */
+            border: 1px solid #CCC;
+            border-radius: 8px; /* More rounded inputs */
+            font-size: 1em; /* Consistent font-size */
+            font-family: 'Poppins', sans-serif; /* Consistent font-family */
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            background-color: #FFFFFF;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus,
+        .filter-input:focus {
+            border-color: #4A90E2; /* Primary Blue on focus */
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2); /* Soft focus ring */
+            outline: none;
+        }
+
+        .form-group select {
+            height: 48px; /* Adjusted height */
+            background-color: white;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23000000%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13%205.4L147.2%20224.2%2020.6%2074.8c-1.7-1.7-4.1-2.5-6.4-2.5H4.8c-2.4%200-4.8%201-6.4%202.5-3.6%203.6-3.6%209.5%200%2013l136.7%20140.7c1.8%201.8%204.2%202.7%206.5%202.7h.1c2.3%200%204.6-.9%206.5-2.7L287%2082.4c3.6-3.6%203.6-9.5%200-13z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 15px center; /* Adjusted position */
+            background-size: 12px auto;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-actions {
+            text-align: right;
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 1px solid #E0E0E0;
+        }
+
+        .form-actions button, .login-button {
+            padding: 14px 25px; /* Larger buttons */
+            margin-left: 15px;
+            border: none;
+            border-radius: 8px; /* More rounded buttons */
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+        }
+
+        .form-actions .save-button {
+            background-color: #4A90E2; /* Primary Blue */
+            color: white;
+        }
+
+        .form-actions .save-button:hover {
+            background-color: #3A7CD0; /* Darker Blue on hover */
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .form-actions .clear-button {
+            background-color: #95A5A6; /* Soft Gray */
+            color: white;
+        }
+
+        .form-actions .clear-button:hover {
+            background-color: #7F8C8D; /* Darker Gray on hover */
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Table Styles */
+        .orders-table {
+            width: 100%;
+            border-collapse: separate; /* Use separate for rounded corners on rows */
+            border-spacing: 0 10px; /* Space between rows */
+            margin-top: 20px;
+            background-color: #FFFFFF;
+            border-radius: 10px; /* Rounded table corners */
+            overflow: hidden; /* Ensures content stays within rounded corners */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); /* Subtle shadow for tables */
+            min-width: 1200px; /* Garante que a tabela não fique muito estreita */
+        }
+
+        .orders-table th, .orders-table td {
+            border: none; /* No internal borders for cleaner look */
+        }
+        
+        .orders-table td {
+            padding: 15px 20px; /* More padding */
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .orders-table th {
+            padding: 15px 20px; /* More padding */
+            text-align: left;
+            vertical-align: middle;
+            background-color: #50B498; /* Accent Green for table headers */
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+        
+        /* Rounded corners for table header cells */
+        .orders-table thead th:first-child { border-top-left-radius: 10px; }
+        .orders-table thead th:last-child { border-top-right-radius: 10px; }
+
+        .orders-table tbody tr {
+            background-color: #FFFFFF;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); /* Shadow for each row */
+            border-radius: 8px; /* Rounded corners for rows */
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .orders-table tbody tr:hover {
+            transform: translateY(-3px); /* Subtle lift on hover */
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .orders-table tbody tr:nth-child(odd) { /* Alternating row background */
+            background-color: #FDFDFD;
+        }
+
+        .orders-table .action-btn {
+            padding: 8px 15px;
+            margin-right: 8px;
+            border: none;
+            border-radius: 6px; /* More rounded action buttons */
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .orders-table .edit-btn {
+            background-color: #F39C12; /* Accent Orange */
+            color: white;
+        }
+
+        .orders-table .edit-btn:hover {
+            background-color: #DB8E10;
+            transform: translateY(-1px);
+        }
+
+        .orders-table .delete-btn {
+            background-color: #E74C3C; /* Accent Red */
+            color: white;
+        }
+
+        .orders-table .delete-btn:hover {
+            background-color: #CC3322;
+            transform: translateY(-1px);
+        }
+
+        /* Approval Buttons */
+        .orders-table .approve-btn {
+            background-color: #50B498; /* Accent Green */
+            color: white;
+        }
+        .orders-table .approve-btn:hover {
+            background-color: #409C80;
+        }
+        .orders-table .disapprove-btn {
+            background-color: #E74C3C; /* Accent Red for disapproval */
+            color: white;
+        }
+        .orders-table .disapprove-btn:hover {
+            background-color: #CC3322;
+        }
+        .orders-table .approve-btn:disabled, .orders-table .disapprove-btn:disabled {
+            background-color: #CCCCCC;
+            cursor: not-allowed;
+            opacity: 0.7;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .orders-table .paid-checkbox {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            vertical-align: middle;
+            margin: 0;
+            accent-color: #50B498; /* Accent Green for checkbox */
+        }
+        .orders-table .paid-checkbox:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        
+        /* Input fields within tables */
+        .orders-table input[type="number"] {
+            width: 90px;
+            padding: 6px 8px;
+            border: 1px solid #CCC;
+            border-radius: 6px;
+            font-size: 0.9em;
+            box-sizing: border-box;
+        }
+        .orders-table input[type="number"]:focus {
+            border-color: #4A90E2;
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+            outline: none;
+        }
+
+
+        /* Login Screen Styles */
+        #login-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Use min-height for better adaptability */
+            background-color: #ECF0F1;
+        }
+
+        #login-form {
+            background-color: #FFFFFF;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); /* Stronger shadow for login form */
+            width: 380px; /* Slightly wider */
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        #login-form h2 {
+            margin-bottom: 30px;
+            color: #2C3E50;
+            font-weight: 600;
+            font-size: 1.8em;
+        }
+
+        #login-form .form-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        .login-button {
+            background-color: #4A90E2;
+            color: white;
+            width: 100%;
+            margin-top: 20px;
+            font-size: 1.1em;
+            padding: 15px 20px;
+        }
+        .login-button:hover {
+            background-color: #3A7CD0;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        #user-info {
+            text-align: right;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+            color: #555;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #E0E0E0;
+        }
+        #user-info button {
+            margin-left: 15px;
+            padding: 7px 12px;
+            border: none;
+            border-radius: 6px;
+            background-color: #E74C3C;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        #user-info button:hover {
+            background-color: #CC3322;
+            transform: translateY(-1px);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Filter input container */
+        .filter-container {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            background-color: #F9F9F9;
+            border-radius: 8px;
+            border: 1px solid #E0E0E0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap; /* Allow wrapping for smaller screens */
+        }
+        .filter-container label {
+            font-weight: 500;
+            color: #555;
+        }
+        .filter-input {
+            flex-grow: 1; /* Allows input to take available space */
+        }
+        
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap; /* Allow wrapping for smaller screens */
+        }
+
+        .export-buttons button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+        }
+
+        .export-buttons .pdf-button {
+            background-color: #E74C3C; /* Red for PDF */
+            color: white;
+        }
+
+        .export-buttons .pdf-button:hover {
+            background-color: #CC3322;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .export-buttons .excel-button {
+            background-color: #27AE60; /* Green for Excel */
+            color: white;
+        }
+
+        .export-buttons .excel-button:hover {
+            background-color: #1E8449;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .export-buttons .delete-db-button {
+            background-color: #34495E; /* Dark blue-gray for delete DB */
+            color: white;
+        }
+        .export-buttons .delete-db-button:hover {
+            background-color: #2C3E50;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen">
+        <div id="login-form">
+            <h2>Login</h2>
+            <div class="form-group">
+                <label for="username">Usuário:</label>
+                <input type="text" id="username" placeholder="Digite seu usuário" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Senha:</label>
+                <input type="password" id="password" placeholder="Digite sua senha" required>
+            </div>
+            <button class="login-button" onclick="login()">Entrar</button>
+        </div>
+    </div>
+
+    <!-- Main Content (Hidden by default) -->
+    <div id="main-content" class="hidden">
+        <div class="container">
+            <div id="user-info">
+                Olá, <span id="currentUserName"></span> (<span id="currentUserRoleDisplay"></span>)
+                <button onclick="logout()">Sair</button>
+            </div>
+            <h1>Sistema de Ordem de Pagamento</h1>
+
+            <div class="section-title">Cadastro / Edição de Ordem</div>
+            <div class="payment-form" id="paymentForm">
+                <div class="form-group">
+                    <label for="favoredName">Nome do Favorecido:</label>
+                    <input type="text" id="favoredName" placeholder="Nome Completo ou Razão Social" required>
+                </div>
+                <div class="form-group">
+                    <label for="priority">Prioridade:</label>
+                    <select id="priority">
+                        <option value="Normal">Normal</option>
+                        <option value="Urgencia">Urgência</option>
+                        <option value="Emergencia">Emergência</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="paymentType">Tipo de Pagamento:</label>
+                    <select id="paymentType" onchange="togglePaymentTypeFields()">
+                        <option value="PIX">PIX</option>
+                        <option value="Boleto">Boleto</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <div class="form-group full-width">
+                    <label for="bankDetails">Dados Bancários/Outros Detalhes:</label>
+                    <textarea id="bankDetails" rows="3" placeholder="Informações da conta, agência, banco, etc."></textarea>
+                </div>
+
+                <!-- Novos campos para PIX - inicialmente ocultos -->
+                <div id="pixFields" style="display: none; grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; gap: 15px;">
+                    <div class="form-group">
+                        <label for="pixKeyType">Tipo de Chave PIX:</label>
+                        <select id="pixKeyType">
+                            <option value="CPF">CPF</option>
+                            <option value="Telefone">Número de Telefone</option>
+                            <option value="CNPJ">CNPJ</option>
+                            <option value="Email">E-mail</option>
+                            <option value="Aleatoria">Chave Aleatória</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pixKey">Chave PIX:</label>
+                        <input type="text" id="pixKey" placeholder="Insira a chave PIX">
+                    </div>
+                </div>
+                
+                <!-- Campos para Boleto - inicialmente ocultos -->
+                <div id="boletoFields" style="display: none; grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; gap: 15px;">
+                    <div class="form-group full-width">
+                        <label for="linhaDigitavel">Linha Digitavel:</label>
+                        <input type="text" id="linhaDigitavel" placeholder="Insira a linha digitavel manualmente">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="generationDate">Data da Geração:</label>
+                    <input type="date" id="generationDate">
+                </div>
+                <div class="form-group">
+                    <label for="paymentForecast">Previsão de Pagamento:</label>
+                    <input type="date" id="paymentForecast">
+                </div>
+                <div class="form-group">
+                    <label for="process">Processo:</label>
+                    <input type="text" id="process" placeholder="Número ou nome do processo">
+                </div>
+                <div class="form-group">
+                    <label for="direction">Direcionamento:</label>
+                    <select id="direction">
+                        <option value="Marina">Marina</option>
+                        <option value="Gabriel">Gabriel</option>
+                        <option value="Loterica">Lotérica</option>
+                        <option value="Tiago">Tiago</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="paymentValue">Valor (R\$):</label>
+                    <input type="number" id="paymentValue" min="0.01" step="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label for="reference">Referente:</label>
+                    <input type="text" id="reference" placeholder="Ex: Pagamento de insumos, frete, serviço">
+                </div>
+                
+                <!-- Campo Solicitante -->
+                <div class="form-group">
+                    <label for="solicitant">Solicitante:</label>
+                    <select id="solicitant" onchange="toggleOtherSolicitantField()">
+                        <option value="Djael Jr">Djael Jr</option>
+                        <option value="Lucas Silva">Lucas Silva</option>
+                        <option value="Rafael Sagrilo">Rafael Sagrilo</option>
+                        <option value="Verônica Barbosa">Verônica Barbosa</option>
+                        <option value="Rafael Sayd">Rafael Sayd</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <div class="form-group" id="otherSolicitantGroup" style="display: none;">
+                    <label for="otherSolicitantName">Nome do Outro Solicitante:</label>
+                    <input type="text" id="otherSolicitantName" placeholder="Nome do solicitante">
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="observation">Observação:</label>
+                    <textarea id="observation" rows="3" placeholder="Informações adicionais relevantes"></textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button class="save-button" id="saveOrderBtn" onclick="saveOrUpdateOrder()">Cadastrar Ordem</button>
+                <button class="clear-button" onclick="clearForm()">Limpar Formulário</button>
+            </div>
+
+            <!-- Seção de Monitoramento -->
+            <div class="section-title">Monitoramento de Ordens de Pagamento</div>
+            
+            <!-- Tabela: Aguardando Aprovação da Diretoria -->
+            <div class="section-subtitle"><h3>1. Ordens Aguardando Aprovação da Diretoria</h3></div>
+            <div class="filter-container">
+                <label for="filterDiretoria">Buscar:</label>
+                <input type="text" id="filterDiretoria" class="filter-input" onkeyup="filterTable('filterDiretoria', 'diretoriaPendingListBody')" placeholder="Filtrar ordens da Diretoria...">
+            </div>
+            <div class="export-buttons">
+                <button class="pdf-button" onclick="exportDataToPdf('diretoriaPending')">Exportar PDF</button>
+                <button class="excel-button" onclick="exportDataToExcel('diretoriaPending')">Exportar Excel</button>
+            </div>
+            <div style="overflow-x: auto;"> <!-- Wrapper para scroll horizontal da tabela -->
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <!-- Cabeçalhos das colunas dinâmicos -->
+                        </tr>
+                    </thead>
+                    <tbody id="diretoriaPendingListBody">
+                        <!-- Ordens aguardando Diretoria -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tabela: Aguardando Aprovação do Financeiro -->
+            <div class="section-subtitle"><h3>2. Ordens Aguardando Aprovação do Financeiro</h3></div>
+            <div class="filter-container">
+                <label for="filterFinanceiro">Buscar:</label>
+                <input type="text" id="filterFinanceiro" class="filter-input" onkeyup="filterTable('filterFinanceiro', 'financeiroPendingListBody')" placeholder="Filtrar ordens do Financeiro...">
+            </div>
+            <div class="export-buttons">
+                <button class="pdf-button" onclick="exportDataToPdf('financeiroPending')">Exportar PDF</button>
+                <button class="excel-button" onclick="exportDataToExcel('financeiroPending')">Exportar Excel</button>
+            </div>
+            <div style="overflow-x: auto;"> <!-- Wrapper para scroll horizontal da tabela -->
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <!-- Cabeçalhos das colunas dinâmicos -->
+                        </tr>
+                    </thead>
+                    <tbody id="financeiroPendingListBody">
+                        <!-- Ordens aguardando Financeiro -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tabela: Aguardando Pagamento (Aprovadas por Diretoria e Financeiro) -->
+            <div class="section-subtitle"><h3>3. Ordens Aguardando Pagamento</h3></div>
+            <div class="filter-container">
+                <label for="filterPaymentPending">Buscar:</label>
+                <input type="text" id="filterPaymentPending" class="filter-input" onkeyup="filterTable('filterPaymentPending', 'paymentPendingListBody')" placeholder="Filtrar ordens aguardando pagamento...">
+            </div>
+            <div class="export-buttons">
+                <button class="pdf-button" onclick="exportDataToPdf('paymentPending')">Exportar PDF</button>
+                <button class="excel-button" onclick="exportDataToExcel('paymentPending')">Exportar Excel</button>
+            </div>
+            <div style="overflow-x: auto;"> <!-- Wrapper para scroll horizontal da tabela -->
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <!-- Cabeçalhos das colunas dinâmicos -->
+                        </tr>
+                    </thead>
+                    <tbody id="paymentPendingListBody">
+                        <!-- Ordens aguardando pagamento -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tabela: Ordens Pagas -->
+            <div class="section-subtitle"><h3>4. Ordens Pagas</h3></div>
+            <div class="filter-container">
+                <label for="filterPaid">Buscar:</label>
+                <input type="text" id="filterPaid" class="filter-input" onkeyup="filterTable('filterPaid', 'paidOrdersListBody')" placeholder="Filtrar ordens pagas...">
+                
+                <label for="filterPaidStartDate">Data Inicial:</label>
+                <input type="date" id="filterPaidStartDate" class="filter-input" onchange="renderOrderLists(); updateDeleteButtonText();">
+                
+                <label for="filterPaidEndDate">Data Final:</label>
+                <input type="date" id="filterPaidEndDate" class="filter-input" onchange="renderOrderLists(); updateDeleteButtonText();">
+            </div>
+            <div class="export-buttons">
+                <button class="pdf-button" onclick="exportDataToPdf('paid')">Exportar PDF</button>
+                <button class="excel-button" onclick="exportDataToExcel('paid')">Exportar Excel</button>
+                <button class="delete-db-button" id="clearDbButton" onclick="clearDatabase()">Excluir Todos os Dados</button>
+            </div>
+            <div style="overflow-x: auto;"> <!-- Wrapper para scroll horizontal da tabela -->
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <!-- Cabeçalhos das colunas dinâmicos -->
+                        </tr>
+                    </thead>
+                    <tbody id="paidOrdersListBody">
+                        <!-- Ordens pagas -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- NOVA TABELA: Ordens com Pagamento Parcial -->
+            <div class="section-subtitle"><h3>5. Ordens com Pagamento Parcial</h3></div>
+            <div class="filter-container">
+                <label for="filterPartialPaid">Buscar:</label>
+                <input type="text" id="filterPartialPaid" class="filter-input" onkeyup="filterTable('filterPartialPaid', 'partialPaymentListBody')" placeholder="Filtrar ordens com pagamento parcial...">
+            </div>
+            <div class="export-buttons">
+                <button class="pdf-button" onclick="exportDataToPdf('partialPaid')">Exportar PDF</button>
+                <button class="excel-button" onclick="exportDataToExcel('partialPaid')">Exportar Excel</button>
+            </div>
+            <div style="overflow-x: auto;"> <!-- Wrapper para scroll horizontal da tabela -->
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <!-- Cabeçalhos das colunas dinâmicos -->
+                        </tr>
+                    </thead>
+                    <tbody id="partialPaymentListBody">
+                        <!-- Ordens com pagamento parcial -->
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // SEU URL DO GOOGLE APPS SCRIPT AQUI
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbylewIqgxAkl3FNfVPmOQb9i1ND4oBYtfM3t6CiqaKxPGp_Qu-byRVFZ7uZKvjScEppg/exec'; 
+
+        let orders = []; // Array para armazenar as ordens
+        let currentEditingOrderId = null; // ID da ordem que está sendo editada
+        let currentUserRole = null; // Papel do usuário logado
+
+        // Dados de usuários para login (apenas para demonstração)
+        const users = {
+            'diretoriaUser': { password: 'd123', role: 'Diretoria' },
+            'financeiroUser': { password: 'f456', role: 'Financeiro' },
+            'comumUser': { password: 'c789', role: 'Comum' },
+            'Geral': { password: '123', role: 'Geral' }
+        };
+
+        // Mapeamento dos IDs dos campos do formulário que serão salvos
+        const formFieldIds = [
+            'favoredName', 'priority', 'paymentType', 'bankDetails', 'generationDate',
+            'paymentForecast', 'process', 'direction', 'paymentValue',
+            'reference', 'solicitant', 'otherSolicitantName', 'observation',
+            'linhaDigitavel', 'pixKeyType', 'pixKey'
+        ];
+
+        // Definindo as colunas a serem exibidas nas tabelas de monitoramento (APENAS ESTAS)
+        // O ID corresponde à chave no objeto `order`, e o label é o texto do cabeçalho
+        const monitoringTableColumns = [
+            { id: 'favoredName', label: 'Favorecido' },
+            { id: 'priority', label: 'Prioridade' },
+            { id: 'paymentValue', label: 'Valor (R\$)' },
+            { id: 'paymentType', label: 'Tipo Pgto.' },
+            { id: 'bankDetails', label: 'Dados Bancários/Outros' },
+            { id: 'pixKeyType', label: 'Tipo Chave PIX' },
+            { id: 'pixKey', label: 'Chave PIX' },
+            { id: 'linhaDigitavel', label: 'Linha Digitavel' },
+            { id: 'process', label: 'Processo' },
+            { id: 'direction', label: 'Direcionamento' },
+            { id: 'reference', label: 'Referente' },
+            { id: 'solicitant', label: 'Solicitante' },
+            { id: 'otherSolicitantName', label: 'Outro Solicitante' },
+            { id: 'observation', label: 'Observação' }
+        ];
+
+        // --- Funções Auxiliares de Data ---
+        function getTodayLocalISO() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0'); // Meses são 0-indexados
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+
+        // --- Funções de Autenticação ---
+        async function login() {
+            const usernameInput = document.getElementById('username').value.trim();
+            const passwordInput = document.getElementById('password').value.trim();
+
+            if (users[usernameInput] && users[usernameInput].password === passwordInput) {
+                currentUserRole = users[usernameInput].role;
+                document.getElementById('currentUserName').textContent = usernameInput;
+                document.getElementById('currentUserRoleDisplay').textContent = currentUserRole;
+                
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+                
+                await loadOrdersFromCloud(); // Carrega dados ao logar
+                renderTableHeaders(); // Renderiza os cabeçalhos das tabelas
+                renderOrderLists();
+                
+                document.getElementById('generationDate').value = getTodayLocalISO();
+                updateDeleteButtonText(); // Update button text on login
+
+                togglePaymentTypeFields(); // Ajusta visibilidade dos campos de pagamento ao carregar
+                toggleOtherSolicitantField(); // Ajusta visibilidade do campo 'Outros Solicitantes'
+            } else {
+                alert('Usuário ou senha inválidos.');
+            }
+        }
+
+        function logout() {
+            currentUserRole = null;
+            document.getElementById('main-content').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            // orders are NOT cleared here to maintain persistence across user logins
+            // No need to call renderOrderLists here, as the main-content is hidden
+
+            // Clear filter inputs
+            document.getElementById('filterDiretoria').value = '';
+            document.getElementById('filterFinanceiro').value = '';
+            document.getElementById('filterPaymentPending').value = '';
+            document.getElementById('filterPaid').value = '';
+            document.getElementById('filterPartialPaid').value = '';
+            document.getElementById('filterPaidStartDate').value = ''; // Clear new date filters
+            document.getElementById('filterPaidEndDate').value = '';   // Clear new date filters
+            updateDeleteButtonText(); // Reset button text on logout
+        }
+
+        // --- Funções de Carregamento e Persistência de Dados (AGORA COMUNICA COM APPS SCRIPT) ---
+        async function loadOrdersFromCloud() {
+            try {
+                const response = await fetch(APPS_SCRIPT_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // Ensure array types are correctly parsed (e.g., payments)
+                orders = data.map(order => {
+                    if (typeof order.payments === 'string') {
+                        try {
+                            order.payments = JSON.parse(order.payments).map(Number);
+                        } catch (e) {
+                            order.payments = [];
+                            console.error("Erro ao fazer parse de payments: ", order.payments, e);
+                        }
+                    } else if (!Array.isArray(order.payments)) {
+                         order.payments = [];
+                    }
+                    // Ensure boolean fields are boolean
+                    if (typeof order.approvedByDiretoria === 'string') order.approvedByDiretoria = order.approvedByDiretoria.toLowerCase() === 'true';
+                    if (typeof order.approvedByFinanceiro === 'string') order.approvedByFinanceiro = order.approvedByFinanceiro.toLowerCase() === 'true';
+                    if (typeof order.isPaid === 'string') order.isPaid = order.isPaid.toLowerCase() === 'true';
+                    
+                    // Normalize date fields to YYYY-MM-DD
+                    const dateFieldsToNormalize = ['generationDate', 'paymentForecast', 'approvalDateDiretoria', 'approvalDateFinanceiro', 'paymentCompletionDate'];
+                    dateFieldsToNormalize.forEach(field => {
+                        if (order[field]) {
+                            // If it's a string like "2025-01-01", keep it.
+                            if (typeof order[field] === 'string' && order[field].match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                return;
+                            }
+                            // Otherwise, try to convert to YYYY-MM-DD
+                            try {
+                                const dateObj = new Date(order[field]);
+                                if (isNaN(dateObj.getTime())) { // Check if valid date
+                                    throw new Error('Invalid date');
+                                }
+                                const year = dateObj.getFullYear();
+                                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                                const day = String(dateObj.getDate()).padStart(2, '0');
+                                order[field] = `${year}-${month}-${day}`;
+                            } catch (e) {
+                                console.warn(`Could not normalize date for field ${field} on order ${order.id}: ${order[field]}. Error: ${e.message}`);
+                                order[field] = null;
+                            }
+                        }
+                    });
+                    
+                    return order;
+                });
+                console.log("Orders loaded from cloud:", orders);
+            } catch (error) {
+                console.error("Failed to load orders from cloud:", error);
+                alert("Erro ao carregar ordens do sistema. Verifique sua conexão ou se o sistema está configurado corretamente.");
+                orders = []; // Fallback to empty array
+            }
+        }
+        
+        // saveOrdersToLocalStorage() function is no longer needed, individual operations will update the cloud
+
+        // --- Funções de Formulário ---
+        function generateUniqueId() {
+            return 'op-' + Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        }
+
+        function collectFormData() {
+            const formData = {};
+            formFieldIds.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    formData[id] = element.value;
+                }
+            });
+            // Normalize paymentValue to a number
+            formData.paymentValue = parseFloat(formData.paymentValue) || 0;
+
+            // Handle Solicitant logic
+            if (formData.solicitant !== 'Outros') {
+                formData.otherSolicitantName = ''; // Clear if not 'Outros'
+            }
+
+            // Handle PIX/Boleto/Outros fields
+            if (formData.paymentType !== 'PIX') {
+                formData.pixKeyType = '';
+                formData.pixKey = '';
+            }
+            if (formData.paymentType !== 'Boleto') {
+                formData.linhaDigitavel = ''; // Always clear if not Boleto
+            }
+            if (formData.paymentType === 'Outros') {
+                // For 'Outros', clear PIX and Boleto specific fields
+                formData.pixKeyType = '';
+                formData.pixKey = '';
+                formData.linhaDigitavel = '';
+            }
+
+            return formData;
+        }
+
+        function populateForm(order) {
+            formFieldIds.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    if (id === 'paymentValue') {
+                         element.value = order[id] !== undefined ? parseFloat(order[id]).toFixed(2) : '';
+                    } else {
+                        element.value = order[id] || '';
+                    }
+                }
+            });
+            currentEditingOrderId = order.id; 
+            document.getElementById('saveOrderBtn').textContent = 'Salvar Alterações';
+            togglePaymentTypeFields(); // Ajusta visibilidade ao popular o formulário
+            toggleOtherSolicitantField(); // Ajusta visibilidade do campo 'Outros Solicitantes' ao popular
+        }
+
+        function clearForm() {
+            formFieldIds.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    if (element.tagName === 'SELECT') {
+                        // Reset to first option, or a specific default if needed
+                        if (id === 'paymentType') { element.value = 'PIX'; }
+                        else if (id === 'solicitant') { element.value = 'Djael Jr'; }
+                        else if (id === 'priority') { element.value = 'Normal'; }
+                        else if (id === 'direction') { element.value = 'Marina'; }
+                        else if (id === 'pixKeyType') { element.value = 'CPF'; }
+                        else { element.value = element.options[0].value; }
+                    } else if (element.type === 'date') {
+                        if (id === 'generationDate') {
+                            element.value = getTodayLocalISO();
+                        } else {
+                            element.value = '';
+                        }
+                    } else if (element.type === 'number') {
+                        element.value = ''; // Limpa campos numéricos
+                    }
+                    else {
+                        element.value = '';
+                    }
+                }
+            });
+            currentEditingOrderId = null;
+            document.getElementById('saveOrderBtn').textContent = 'Cadastrar Ordem';
+            togglePaymentTypeFields(); // Ajusta visibilidade ao limpar o formulário
+            toggleOtherSolicitantField(); // Ajusta visibilidade do campo 'Outros Solicitantes'
+        }
+
+        // --- Função para verificar duplicidade ---
+        function isDuplicate(newOrderData, existingOrders, currentOrderId = null) {
+            const { favoredName, paymentValue } = newOrderData; // APENAS NOME DO FAVORECIDO E VALOR
+            
+            // Basic validation to avoid comparing with empty essential fields
+            if (!favoredName || paymentValue === 0) {
+                return false; // Not a valid comparison if essential fields are missing
+            }
+
+            // Normalize for comparison (case-insensitive for strings, trim)
+            const normalizedFavoredName = favoredName.toLowerCase().trim();
+
+            for (const existingOrder of existingOrders) {
+                // Skip if it's the order being currently edited
+                if (currentOrderId && existingOrder.id === currentOrderId) {
+                    continue;
+                }
+
+                const existingNormalizedFavoredName = existingOrder.favoredName.toLowerCase().trim();
+
+                if (
+                    existingNormalizedFavoredName === normalizedFavoredName &&
+                    parseFloat(existingOrder.paymentValue).toFixed(2) === paymentValue.toFixed(2)
+                ) {
+                    return true; // Found a duplicate
+                }
+            }
+            return false; // No duplicate found
+        }
+
+
+        async function saveOrUpdateOrder() {
+            const orderData = collectFormData();
+
+            if (!orderData.favoredName || orderData.paymentValue <= 0) {
+                alert('Nome do Favorecido e Valor são campos obrigatórios e o valor deve ser maior que zero.');
+                return;
+            }
+
+            // Validação para Linha Digitavel se Boleto for selecionado
+            if (orderData.paymentType === 'Boleto' && !orderData.linhaDigitavel) {
+                alert('Ao selecionar "Boleto", a Linha Digitavel é obrigatória.');
+                return;
+            }
+
+            // Validação para Chave PIX se PIX for selecionado
+            if (orderData.paymentType === 'PIX' && (!orderData.pixKeyType || !orderData.pixKey)) {
+                alert('Ao selecionar "PIX", o Tipo e a Chave PIX são obrigatórios.');
+                return;
+            }
+            
+            // Validação para Solicitante 'Outros'
+            if (orderData.solicitant === 'Outros' && !orderData.otherSolicitantName.trim()) {
+                alert('Ao selecionar "Outros" como Solicitante, o nome do outro solicitante é obrigatório.');
+                return;
+            }
+
+
+            // Check for duplicate only if it's a new order or if data changed significantly for an existing one
+            // We check against all orders, and if currentEditingOrderId is set, the isDuplicate function will ignore that specific order.
+            if (isDuplicate(orderData, orders, currentEditingOrderId)) { 
+                const proceed = await new Promise(resolve => {
+                    if (confirm('Uma ordem de pagamento similar já existe (Nome do Favorecido e Valor). Deseja prosseguir com o cadastro/atualização mesmo assim?')) {
+                        resolve(true);
+                    } else {
+                        resolve(false);
+                    }
+                });
+                if (!proceed) {
+                    return; // User chose not to proceed
+                }
+            }
+            
+            let actionType;
+            let payloadData = { ...orderData }; // Create a copy
+
+            if (currentEditingOrderId) {
+                actionType = 'update';
+                payloadData.id = currentEditingOrderId; // Ensure ID is passed for update
+            } else {
+                actionType = 'add';
+                payloadData.id = generateUniqueId();
+                payloadData.status = 'Pendente'; 
+                payloadData.approvedByDiretoria = false;
+                payloadData.approvedByFinanceiro = false;
+                payloadData.isPaid = false;
+                payloadData.payments = []; // Initialize payments array for new orders
+                payloadData.approvalDateDiretoria = null;
+                payloadData.approvalDateFinanceiro = null;
+                payloadData.paymentCompletionDate = null;
+            }
+            
+            // Important: Stringify arrays/objects for Google Sheets storage if needed
+            if (payloadData.payments && Array.isArray(payloadData.payments)) {
+                payloadData.payments = JSON.stringify(payloadData.payments);
+            }
+
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: actionType,
+                        id: payloadData.id, // Used by Apps Script for update/delete
+                        data: payloadData
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const result = await response.json();
+                if (result.success) {
+                    alert(`Ordem ${actionType === 'add' ? 'cadastrada' : 'atualizada'} com sucesso!`);
+                } else {
+                    alert(`Falha ao ${actionType === 'add' ? 'cadastrar' : 'atualizar'} ordem: ${result.message}`);
+                }
+            } catch (error) {
+                console.error(`Error saving/updating order:`, error);
+                alert(`Erro de comunicação com o servidor ao ${actionType === 'add' ? 'cadastrar' : 'atualizar'} ordem.`);
+            } finally {
+                await loadOrdersFromCloud(); // Always reload data after C/U/D operation
+                renderOrderLists(); 
+                clearForm();
+            }
+        }
+
+        async function editOrder(id) {
+            const orderToEdit = orders.find(o => o.id === id);
+            if (orderToEdit) {
+                currentEditingOrderId = id;
+                populateForm(orderToEdit);
+                window.scrollTo({ top: 0, behavior: 'smooth' }); 
+            }
+        }
+
+        async function deleteOrder(id) {
+            if (confirm('Tem certeza que deseja excluir esta ordem de pagamento?')) {
+                try {
+                    const response = await fetch(APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            action: 'delete',
+                            id: id
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Ordem excluída com sucesso!');
+                    } else {
+                        alert(`Falha ao excluir ordem: ${result.message}`);
+                    }
+                } catch (error) {
+                    console.error("Error deleting order:", error);
+                    alert("Erro de comunicação com o servidor ao excluir ordem.");
+                } finally {
+                    await loadOrdersFromCloud(); // Always reload data
+                    renderOrderLists(); 
+                    if (currentEditingOrderId === id) {
+                        clearForm(); 
+                    }
+                }
+            }
+        }
+
+        // --- Funções de Visibilidade de Campos Condicionais ---
+        function togglePaymentTypeFields() {
+            const paymentType = document.getElementById('paymentType').value;
+            const boletoFieldsDiv = document.getElementById('boletoFields');
+            const pixFieldsDiv = document.getElementById('pixFields');
+            const linhaDigitavelInput = document.getElementById('linhaDigitavel');
+            const pixKeyInput = document.getElementById('pixKey');
+            const pixKeyTypeSelect = document.getElementById('pixKeyType');
+            const bankDetailsLabel = document.querySelector('label[for="bankDetails"]');
+            
+            // Reset visibility
+            boletoFieldsDiv.style.display = 'none';
+            pixFieldsDiv.style.display = 'none';
+            linhaDigitavelInput.removeAttribute('required');
+            pixKeyInput.removeAttribute('required');
+            pixKeyTypeSelect.removeAttribute('required');
+
+            // Adjust labels/placeholders and display based on payment type
+            if (paymentType === 'Boleto') {
+                boletoFieldsDiv.style.display = 'grid';
+                linhaDigitavelInput.setAttribute('required', '');
+                bankDetailsLabel.textContent = 'Dados Bancários (opcional):';
+                // Clear PIX fields if switching to Boleto
+                pixKeyInput.value = '';
+                pixKeyTypeSelect.value = 'CPF'; 
+            } else if (paymentType === 'PIX') {
+                pixFieldsDiv.style.display = 'grid';
+                pixKeyInput.setAttribute('required', '');
+                pixKeyTypeSelect.setAttribute('required', '');
+                bankDetailsLabel.textContent = 'Dados Bancários (opcional) / Observações do PIX:';
+                // Clear Boleto fields if switching to PIX
+                linhaDigitavelInput.value = '';
+            } else { // Outros
+                bankDetailsLabel.textContent = 'Dados Bancários/Outros Detalhes:';
+                // Clear all specific fields if switching to Outros
+                linhaDigitavelInput.value = '';
+                pixKeyInput.value = '';
+                pixKeyTypeSelect.value = 'CPF';
+            }
+        }
+
+        function toggleOtherSolicitantField() {
+            const solicitantSelect = document.getElementById('solicitant');
+            const otherSolicitantGroup = document.getElementById('otherSolicitantGroup');
+            const otherSolicitantNameInput = document.getElementById('otherSolicitantName');
+
+            if (solicitantSelect.value === 'Outros') {
+                otherSolicitantGroup.style.display = 'flex';
+                otherSolicitantNameInput.setAttribute('required', '');
+            } else {
+                otherSolicitantGroup.style.display = 'none';
+                otherSolicitantNameInput.removeAttribute('required');
+                otherSolicitantNameInput.value = ''; // Clear the field when hidden
+            }
+        }
+
+
+        // --- Funções de Aprovação e Monitoramento ---
+
+        function isGeral() {
+            return currentUserRole === 'Geral';
+        }
+        
+        // Helper to format date to DD/MM/YYYY
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            // A data agora SEMPRE deverá vir no formato YYYY-MM-DD devido à normalização no loadOrdersFromCloud
+            // Portanto, podemos fazer a conversão direta sem medo de problemas de fuso horário.
+            const parts = dateString.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY
+            }
+            // Fallback (não deveria ser necessário após a normalização)
+            try {
+                const date = new Date(dateString);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}/${month}/${year}`;
+            } catch (e) {
+                console.error("Erro ao formatar data:", dateString, e);
+                return dateString; // Retorna string original se a formatação falhar
+            }
+        }
+
+        async function updateOrderInCloud(orderId, updatedOrderData) {
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'update',
+                        id: orderId,
+                        data: updatedOrderData
+                    })
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const result = await response.json();
+                if (!result.success) {
+                    throw new Error(result.message || 'Falha desconhecida ao atualizar ordem.');
+                }
+                return true;
+            } catch (error) {
+                console.error("Erro ao atualizar ordem na nuvem:", error);
+                alert(`Erro de comunicação com o servidor ao atualizar ordem: ${error.message}`);
+                return false;
+            } finally {
+                await loadOrdersFromCloud();
+                renderOrderLists();
+            }
+        }
+
+        async function toggleDiretoriaApproval(id) {
+            const orderIndex = orders.findIndex(o => o.id === id);
+            if (orderIndex > -1) {
+                const order = { ...orders[orderIndex] }; // Criar uma cópia para modificar
+
+                // Role check: Only 'Diretoria' or 'Geral' can toggle this approval
+                if (currentUserRole !== 'Diretoria' && !isGeral()) {
+                    alert('Você não tem permissão para realizar esta ação.');
+                    return;
+                }
+
+                if (order.approvedByDiretoria) { 
+                    order.approvedByDiretoria = false;
+                    order.approvedByFinanceiro = false;
+                    order.isPaid = false;
+                    order.payments = [];
+                    order.status = 'Pendente';
+                    order.approvalDateDiretoria = null;
+                    order.approvalDateFinanceiro = null;
+                    order.paymentCompletionDate = null;
+                } else {
+                    order.approvedByDiretoria = true;
+                    order.status = 'Aguardando Financeiro';
+                    order.approvalDateDiretoria = getTodayLocalISO();
+                }
+                order.payments = JSON.stringify(order.payments); // Stringify for Apps Script
+                await updateOrderInCloud(order.id, order);
+            }
+        }
+
+        async function toggleFinanceiroApproval(id) {
+            const orderIndex = orders.findIndex(o => o.id === id);
+            if (orderIndex > -1) {
+                const order = { ...orders[orderIndex] };
+
+                // Role check: Only 'Financeiro' or 'Geral' can toggle this approval for Financeiro actions
+                if (currentUserRole !== 'Financeiro' && !isGeral()) {
+                    alert('Você não tem permissão para realizar esta ação.');
+                    return;
+                }
+
+                if (!order.approvedByDiretoria) {
+                    alert('Aprovação do Financeiro requer aprovação prévia da Diretoria.');
+                    return;
+                }
+
+                if (order.approvedByFinanceiro) { 
+                    order.approvedByFinanceiro = false;
+                    order.isPaid = false;
+                    order.payments = [];
+                    order.status = 'Aguardando Financeiro';
+                    order.approvalDateFinanceiro = null;
+                    order.paymentCompletionDate = null;
+                } else {
+                    order.approvedByFinanceiro = true;
+                    order.status = 'Aguardando Pagamento';
+                    order.approvalDateFinanceiro = getTodayLocalISO();
+                }
+                order.payments = JSON.stringify(order.payments); // Stringify for Apps Script
+                await updateOrderInCloud(order.id, order);
+            }
+        }
+
+        async function revertApproval(id, stage) {
+            const orderIndex = orders.findIndex(o => o.id === id);
+            if (orderIndex > -1) {
+                const order = { ...orders[orderIndex] };
+
+                if (isGeral()) { // Geral can revert anything
+                    if (stage === 'financeiro') {
+                        order.approvedByFinanceiro = false;
+                        order.isPaid = false;
+                        order.payments = [];
+                        order.status = 'Aguardando Financeiro';
+                        order.approvalDateFinanceiro = null;
+                        order.paymentCompletionDate = null;
+                    } else if (stage === 'diretoria') {
+                        order.approvedByDiretoria = false;
+                        order.approvedByFinanceiro = false;
+                        order.isPaid = false;
+                        order.payments = [];
+                        order.status = 'Pendente';
+                        order.approvalDateDiretoria = null;
+                        order.approvalDateFinanceiro = null;
+                        order.paymentCompletionDate = null;
+                    }
+                } else if (currentUserRole === 'Diretoria') {
+                    if (stage === 'diretoria' && order.status === 'Aguardando Financeiro') {
+                        order.approvedByDiretoria = false;
+                        order.approvedByFinanceiro = false;
+                        order.isPaid = false;
+                        order.payments = [];
+                        order.status = 'Pendente';
+                        order.approvalDateDiretoria = null;
+                        order.approvalDateFinanceiro = null;
+                        order.paymentCompletionDate = null;
+                    } else {
+                        alert('Você não tem permissão para realizar esta ação neste estágio.');
+                        return;
+                    }
+                } else if (currentUserRole === 'Financeiro') {
+                    if (stage === 'financeiro' && order.status === 'Aguardando Pagamento') {
+                        order.approvedByFinanceiro = false;
+                        order.isPaid = false;
+                        order.payments = [];
+                        order.status = 'Aguardando Financeiro';
+                        order.approvalDateFinanceiro = null;
+                        order.paymentCompletionDate = null;
+                    } else {
+                        alert('Você não tem permissão para realizar esta ação neste estágio.');
+                        return;
+                    }
+                } else {
+                    alert('Você não tem permissão para realizar esta ação.');
+                    return;
+                }
+                order.payments = JSON.stringify(order.payments); // Stringify for Apps Script
+                await updateOrderInCloud(order.id, order);
+            }
+        }
+
+        async function addPartialPayment(id) {
+            const orderIndex = orders.findIndex(o => o.id === id);
+            if (orderIndex > -1) {
+                const order = { ...orders[orderIndex] };
+
+                const partialAmountInput = document.getElementById(`partialAmount_${order.id}`);
+                let newPartialAmount = parseFloat(partialAmountInput.value) || 0;
+
+                const canMarkPaid = (currentUserRole === 'Comum' || currentUserRole === 'Diretoria' || currentUserRole === 'Financeiro' || isGeral()) && order.approvedByDiretoria && order.approvedByFinanceiro;
+
+                if (!canMarkPaid) {
+                    alert('Você não tem permissão para realizar esta ação ou a ordem não foi totalmente aprovada.');
+                    return;
+                }
+                
+                if (newPartialAmount <= 0) {
+                    alert('Por favor, insira um valor maior que zero para registrar um pagamento parcial.');
+                    return;
+                }
+
+                order.payments.push(newPartialAmount); 
+                partialAmountInput.value = ''; // Limpa o campo após adicionar
+                partialAmountInput.focus(); // Mantém o foco para próxima adição
+
+                const totalPaid = order.payments.reduce((sum, val) => sum + val, 0);
+
+                if (totalPaid >= order.paymentValue) {
+                    order.status = 'Paga';
+                    order.isPaid = true;
+                } else {
+                    order.status = 'Pagamento Parcial';
+                    order.isPaid = false;
+                }
+                order.paymentCompletionDate = getTodayLocalISO();
+                order.payments = JSON.stringify(order.payments); // Stringify for Apps Script
+                await updateOrderInCloud(order.id, order);
+                updateDeleteButtonText(); 
+            }
+        }
+
+        async function markAsFullyPaid(id) {
+            const orderIndex = orders.findIndex(o => o.id === id);
+            if (orderIndex > -1) {
+                const order = { ...orders[orderIndex] };
+
+                const canMarkPaid = (currentUserRole === 'Comum' || currentUserRole === 'Diretoria' || currentUserRole === 'Financeiro' || isGeral()) && order.approvedByDiretoria && order.approvedByFinanceiro;
+
+                if (!canMarkPaid) {
+                    alert('Você não tem permissão para realizar esta ação ou a ordem não foi totalmente aprovada.');
+                    return;
+                }
+
+                if (confirm(`Tem certeza que deseja marcar esta ordem como PAGA TOTALMENTE?`)) {
+                    order.payments = [order.paymentValue]; // Define o pagamento como o valor total
+                    order.status = 'Paga';
+                    order.isPaid = true;
+                    order.paymentCompletionDate = getTodayLocalISO();
+                    order.payments = JSON.stringify(order.payments); // Stringify for Apps Script
+                    await updateOrderInCloud(order.id, order);
+                    updateDeleteButtonText();
+                }
+            }
+        }
+
+
+        // Handles updates to individual partial payment input fields in partial/paid tables
+        async function handleIndividualPartialPaymentUpdate(orderId, paymentIndex, newValue) {
+            const orderIndex = orders.findIndex(o => o.id === orderId);
+            if (orderIndex > -1) {
+                const order = { ...orders[orderIndex] };
+                let value = parseFloat(newValue) || 0;
+
+                if (value < 0) value = 0;
+                
+                while(order.payments.length <= paymentIndex) {
+                    order.payments.push(0);
+                }
+                order.payments[paymentIndex] = value;
+                
+                for (let i = order.payments.length - 1; i >= 0; i--) {
+                    if (order.payments[i] === 0) {
+                        order.payments.pop();
+                    } else {
+                        break;
+                    }
+                }
+                if (order.payments.length === 0) {
+                     order.status = 'Aguardando Pagamento';
+                     order.isPaid = false;
+                     order.paymentCompletionDate = null;
+                }
+
+                const totalPaid = order.payments.reduce((sum, val) => sum + val, 0);
+
+                if (totalPaid >= order.paymentValue) {
+                    order.status = 'Paga';
+                    order.isPaid = true;
+                    order.paymentCompletionDate = getTodayLocalISO();
+                } else if (order.payments.length > 0 && totalPaid > 0) {
+                    order.status = 'Pagamento Parcial';
+                    order.isPaid = false;
+                    order.paymentCompletionDate = getTodayLocalISO();
+                } else {
+                    order.status = 'Aguardando Pagamento';
+                    order.isPaid = false;
+                    order.payments = [];
+                    order.paymentCompletionDate = null;
+                }
+                order.payments = JSON.stringify(order.payments); // Stringify for Apps Script
+                await updateOrderInCloud(order.id, order);
+                updateDeleteButtonText();
+            }
+        }
+
+
+        // Função para filtrar as tabelas (mantida a mesma lógica, que já é robusta)
+        function filterTable(inputId, tableBodyId) {
+            const input = document.getElementById(inputId);
+            const filter = input.value.toLowerCase();
+            const tableBody = document.getElementById(tableBodyId);
+            const tr = tableBody.getElementsByTagName('tr');
+
+            for (let i = 0; i < tr.length; i++) {
+                let displayRow = false;
+                const tds = tr[i].getElementsByTagName('td'); 
+                if (tds.length > 0) { 
+                    // Check if it's the "Nenhuma ordem..." row
+                    if (tds.length === 1 && tds[0].textContent.includes('Nenhuma ordem')) {
+                        displayRow = true;
+                    } else {
+                        for (let j = 0; j < tds.length; j++) {
+                            const cellText = tds[j].textContent || tds[j].innerText;
+                            if (tds[j].querySelector('input')) {
+                                const inputVal = tds[j].querySelector('input').value;
+                                if (inputVal.toLowerCase().includes(filter)) {
+                                    displayRow = true;
+                                    break;
+                                }
+                            }
+                            if (cellText.toLowerCase().includes(filter)) {
+                                displayRow = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                tr[i].style.display = displayRow ? '' : 'none';
+            }
+        }
+
+        // Função para renderizar os cabeçalhos das tabelas
+        function renderTableHeaders() {
+            // Filter out PIX/Boleto specific columns and otherSolicitantName for general display if they are empty
+            const visibleMonitoringColumns = monitoringTableColumns.filter(col => {
+                return !['linhaDigitavel', 'pixKeyType', 'pixKey', 'otherSolicitantName'].includes(col.id);
+            });
+            const dataHeadersHtml = visibleMonitoringColumns.map(col => `<th>${col.label}</th>`).join('');
+            
+            document.querySelectorAll('#diretoriaPendingListBody, #financeiroPendingListBody, #paymentPendingListBody, #paidOrdersListBody, #partialPaymentListBody').forEach(tableBody => {
+                const table = tableBody.closest('table');
+                if (table) {
+                    let thead = table.querySelector('thead');
+                    if (!thead) {
+                        thead = document.createElement('thead');
+                        table.prepend(thead);
+                    }
+
+                    let headersHtmlToApply = '';
+                    if (tableBody.id === 'diretoriaPendingListBody') {
+                        // Headers for Diretoria pending: Actions, data columns, Generation Date
+                        headersHtmlToApply = `<th>Ações</th>${dataHeadersHtml}<th>Data Geração</th>`;
+                    } else if (tableBody.id === 'financeiroPendingListBody') {
+                        // Headers for Financeiro pending: Actions, data columns, Diretoria Approval Date, Generation Date
+                        headersHtmlToApply = `<th>Ações</th><th>Data Aprovado Dir.</th>${dataHeadersHtml}<th>Data Geração</th>`;
+                    } else if (tableBody.id === 'paymentPendingListBody') {
+                        // Headers for Payment pending: Actions, Payment Input, Checkbox, Financeiro Approval Date, data columns, Generation Date
+                        headersHtmlToApply = `<th>Ações</th><th>Valor Parcial (R\$)</th><th>Adicionar Parcial</th><th>Pagar Total</th><th>Data Aprovado Fin.</th>${dataHeadersHtml}<th>Data Geração</th>`;
+                    } else if (tableBody.id === 'paidOrdersListBody' || tableBody.id === 'partialPaymentListBody') {
+                        // Headers for Paid/Partial: Actions, Total Paid, Val 1, 2, 3, Completion Date, data columns, Generation Date
+                        headersHtmlToApply = `<th>Ações</th><th>Total Pago (R\$)</th><th>Valor Pago 1</th><th>Valor Pago 2</th><th>Valor Pago 3</th><th>Data Pagamento</th>${dataHeadersHtml}<th>Data Geração</th>`;
+                    }
+                    thead.innerHTML = `<tr>${headersHtmlToApply}</tr>`;
+                }
+            });
+        }
+
+
+        // Função para renderizar todas as tabelas de ordens
+        function renderOrderLists() {
+            document.getElementById('diretoriaPendingListBody').innerHTML = '';
+            document.getElementById('financeiroPendingListBody').innerHTML = '';
+            document.getElementById('paymentPendingListBody').innerHTML = '';
+            document.getElementById('paidOrdersListBody').innerHTML = '';
+            document.getElementById('partialPaymentListBody').innerHTML = '';
+
+            let hasDiretoriaPending = false;
+            let hasFinanceiroPending = false;
+            let hasPaymentPending = false;
+            let hasPaidOrders = false;
+            let hasPartialPaidOrders = false;
+
+            // Filter out PIX/Boleto specific columns and otherSolicitantName for general display if they are empty
+            const visibleMonitoringColumns = monitoringTableColumns.filter(col => {
+                return !['linhaDigitavel', 'pixKeyType', 'pixKey', 'otherSolicitantName'].includes(col.id);
+            });
+
+            const numberOfVisibleDataColumns = visibleMonitoringColumns.length; 
+            const totalColsDiretoriaFinanceiro = 1 + numberOfVisibleDataColumns + 1;
+            const totalColsFinanceiroPending = 1 + 1 + numberOfVisibleDataColumns + 1;
+            const totalColsPaymentPending = 1 + 1 + 1 + 1 + 1 + numberOfVisibleDataColumns + 1;
+            const totalColsPaidOrdersPartial = 1 + 4 + 1 + numberOfVisibleDataColumns + 1;
+
+
+            if (!currentUserRole || orders.length === 0) { 
+                 document.getElementById('diretoriaPendingListBody').innerHTML = `<tr><td colspan="${totalColsDiretoriaFinanceiro}" style="text-align: center; padding: 20px;">Nenhuma ordem aguardando Diretoria.</td></tr>`;
+                document.getElementById('financeiroPendingListBody').innerHTML = `<tr><td colspan="${totalColsFinanceiroPending}" style="text-align: center; padding: 20px;">Nenhuma ordem aguardando Financeiro.</td></tr>`;
+                document.getElementById('paymentPendingListBody').innerHTML = `<tr><td colspan="${totalColsPaymentPending}" style="text-align: center; padding: 20px;">Nenhuma ordem aguardando pagamento.</td></tr>`;
+                document.getElementById('paidOrdersListBody').innerHTML = `<tr><td colspan="${totalColsPaidOrdersPartial}" style="text-align: center; padding: 20px;">Nenhuma ordem paga.</td></tr>`;
+                document.getElementById('partialPaymentListBody').innerHTML = `<tr><td colspan="${totalColsPaidOrdersPartial}" style="text-align: center; padding: 20px;">Nenhuma ordem com pagamento parcial.</td></tr>`;
+                return;
+            }
+
+
+            orders.forEach(order => {
+                let row;
+                const dataCells = visibleMonitoringColumns.map(col => {
+                    let value = order[col.id];
+                    if (col.id === 'paymentValue') {
+                        value = `R\$ ${parseFloat(value || 0).toFixed(2).replace('.', ',')}`; // Format to Brazilian currency
+                    } else if (col.id === 'solicitant' && order.solicitant === 'Outros') {
+                        value = order.otherSolicitantName || 'Outros';
+                    } else if (['bankDetails', 'reference', 'observation'].includes(col.id)) {
+                        value = value ? value.length > 50 ? value.substring(0, 47) + '...' : value : '';
+                    } else if (['linhaDigitavel', 'pixKey'].includes(col.id)) {
+                        value = value ? value.length > 20 ? value.substring(0, 17) + '...' : value : '';
+                    }
+                    return `<td>${value || ''}</td>`;
+                }).join('');
+
+                const commonCrudActionsHtml = `
+                    <button class="action-btn edit-btn" onclick="editOrder('${order.id}')">Editar</button>
+                    <button class="action-btn delete-btn" onclick="deleteOrder('${order.id}')">Excluir</button>
+                `;
+
+                if (order.status === 'Pendente') {
+                    row = document.getElementById('diretoriaPendingListBody').insertRow();
+                    row.innerHTML = `
+                        <td class="actions">
+                            <button class="action-btn ${order.approvedByDiretoria ? 'disapprove-btn' : 'approve-btn'}" 
+                                onclick="toggleDiretoriaApproval('${order.id}')"
+                                ${currentUserRole !== 'Diretoria' && !isGeral() ? 'disabled' : ''}>
+                                ${order.approvedByDiretoria ? 'Desaprovar' : 'Aprovar'}
+                            </button>
+                            ${commonCrudActionsHtml}
+                        </td>
+                        ${dataCells}
+                        <td>${formatDate(order.generationDate)}</td>
+                    `;
+                    hasDiretoriaPending = true;
+                } else if (order.status === 'Aguardando Financeiro') {
+                    row = document.getElementById('financeiroPendingListBody').insertRow();
+                    row.innerHTML = `
+                        <td class="actions">
+                            <button class="action-btn ${order.approvedByFinanceiro ? 'disapprove-btn' : 'approve-btn'}" 
+                                onclick="toggleFinanceiroApproval('${order.id}')"
+                                ${currentUserRole !== 'Financeiro' && !isGeral() ? 'disabled' : ''}>
+                                ${order.approvedByFinanceiro ? 'Desaprovar' : 'Aprovar'}
+                            </button>
+                            <button class="action-btn approve-btn" onclick="revertApproval('${order.id}', 'diretoria')"
+                                ${currentUserRole !== 'Diretoria' && !isGeral() ? 'disabled' : ''}>
+                                Reverter Aprov. Dir.
+                            </button>
+                            ${commonCrudActionsHtml}
+                        </td>
+                        <td>${formatDate(order.approvalDateDiretoria)}</td>
+                        ${dataCells}
+                        <td>${formatDate(order.generationDate)}</td>
+                    `;
+                    hasFinanceiroPending = true;
+                } else if (order.status === 'Aguardando Pagamento') {
+                    const totalPaid = (order.payments || []).reduce((sum, val) => sum + val, 0);
+                    row = document.getElementById('paymentPendingListBody').insertRow();
+                    row.innerHTML = `
+                        <td class="actions">
+                            <button class="action-btn approve-btn" onclick="revertApproval('${order.id}', 'financeiro')"
+                                ${currentUserRole !== 'Financeiro' && !isGeral() ? 'disabled' : ''}>
+                                Reverter Aprov. Fin.
+                            </button>
+                            ${commonCrudActionsHtml}
+                        </td>
+                        <td>
+                            <input type="number" id="partialAmount_${order.id}" placeholder="Valor" step="0.01" value="">
+                            <div style="font-size: 0.8em; color: #555;">Pago: R\$ ${totalPaid.toFixed(2).replace('.', ',')} / R\$ ${parseFloat(order.paymentValue).toFixed(2).replace('.', ',')}</div>
+                        </td>
+                        <td>
+                            <button class="action-btn approve-btn" onclick="addPartialPayment('${order.id}')"
+                                ${!((currentUserRole === 'Comum' || currentUserRole === 'Diretoria' || currentUserRole === 'Financeiro' || isGeral()) && order.approvedByDiretoria && order.approvedByFinanceiro) ? 'disabled' : ''}>
+                                Adicionar Parcial
+                            </button>
+                        </td>
+                        <td>
+                            <button class="action-btn approve-btn" onclick="markAsFullyPaid('${order.id}')"
+                                ${!((currentUserRole === 'Comum' || currentUserRole === 'Diretoria' || currentUserRole === 'Financeiro' || isGeral()) && order.approvedByDiretoria && order.approvedByFinanceiro) ? 'disabled' : ''}>
+                                Pagar Total
+                            </button>
+                        </td>
+                        <td>${formatDate(order.approvalDateFinanceiro)}</td>
+                        ${dataCells}
+                        <td>${formatDate(order.generationDate)}</td>
+                    `;
+                    hasPaymentPending = true;
+                } else if (order.status === 'Paga' || order.status === 'Pagamento Parcial') {
+                    const totalPaid = (order.payments || []).reduce((sum, val) => sum + val, 0);
+                    const paidValues = order.payments || [];
+
+                    // Filter based on date range for "Ordens Pagas" table
+                    const filterStartDate = document.getElementById('filterPaidStartDate').value;
+                    const filterEndDate = document.getElementById('filterPaidEndDate').value;
+
+                    let shouldDisplayInPaidTable = false;
+                    if (order.status === 'Paga') {
+                         if (!filterStartDate && !filterEndDate) {
+                             shouldDisplayInPaidTable = true;
+                         } else if (order.paymentCompletionDate) {
+                             const completionDate = new Date(order.paymentCompletionDate + 'T00:00:00'); // Add T00:00:00 to ensure UTC interpretation and prevent timezone issues
+                             const start = filterStartDate ? new Date(filterStartDate + 'T00:00:00') : null;
+                             const end = filterEndDate ? new Date(filterEndDate + 'T00:00:00') : null;
+
+                             if ((!start || completionDate >= start) && (!end || completionDate <= end)) {
+                                 shouldDisplayInPaidTable = true;
+                             }
+                         }
+                    }
+
+                    if (order.status === 'Paga' && shouldDisplayInPaidTable) {
+                        row = document.getElementById('paidOrdersListBody').insertRow();
+                        row.innerHTML = `
+                            <td class="actions">
+                                ${commonCrudActionsHtml}
+                            </td>
+                            <td>R\$ ${totalPaid.toFixed(2).replace('.', ',')}</td>
+                            <td><input type="number" step="0.01" value="${(paidValues[0] || 0).toFixed(2)}" onchange="handleIndividualPartialPaymentUpdate('${order.id}', 0, this.value)" ${currentUserRole !== 'Financeiro' && !isGeral() ? 'disabled' : ''}></td>
+                            <td><input type="number" step="0.01" value="${(paidValues[1] || 0).toFixed(2)}" onchange="handleIndividualPartialPaymentUpdate('${order.id}', 1, this.value)" ${currentUserRole !== 'Financeiro' && !isGeral() ? 'disabled' : ''}></td>
+                            <td><input type="number" step="0.01" value="${(paidValues[2] || 0).toFixed(2)}" onchange="handleIndividualPartialPaymentUpdate('${order.id}', 2, this.value)" ${currentUserRole !== 'Financeiro' && !isGeral() ? 'disabled' : ''}></td>
+                            <td>${formatDate(order.paymentCompletionDate)}</td>
+                            ${dataCells}
+                            <td>${formatDate(order.generationDate)}</td>
+                        `;
+                        hasPaidOrders = true;
+                    } else if (order.status === 'Pagamento Parcial') {
+                        row = document.getElementById('partialPaymentListBody').insertRow();
+                        row.innerHTML = `
+                            <td class="actions">
+                                ${commonCrudActionsHtml}
+                            </td>
+                            <td>R\$ ${totalPaid.toFixed(2).replace('.', ',')}</td>
+                            <td><input type="number" step="0.01" value="${(paidValues[0] || 0).toFixed(2)}" onchange="handleIndividualPartialPaymentUpdate('${order.id}', 0, this.value)" ${currentUserRole !== 'Financeiro' && !isGeral() ? 'disabled' : ''}></td>
+                            <td><input type="number" step="0.01" value="${(paidValues[1] || 0).toFixed(2)}" onchange="handleIndividualPartialPaymentUpdate('${order.id}', 1, this.value)" ${currentUserRole !== 'Financeiro' && !isGeral() ? 'disabled' : ''}></td>
+                            <td><input type="number" step="0.01" value="${(paidValues[2] || 0).toFixed(2)}" onchange="handleIndividualPartialPaymentUpdate('${order.id}', 2, this.value)" ${currentUserRole !== 'Financeiro' && !isGeral() ? 'disabled' : ''}></td>
+                            <td>${formatDate(order.paymentCompletionDate)}</td>
+                            ${dataCells}
+                            <td>${formatDate(order.generationDate)}</td>
+                        `;
+                        hasPartialPaidOrders = true;
+                    }
+                }
+            });
+
+            // Display "Nenhuma ordem..." messages if lists are empty after filtering/rendering
+            if (!hasDiretoriaPending) {
+                document.getElementById('diretoriaPendingListBody').innerHTML = `<tr><td colspan="${totalColsDiretoriaFinanceiro}" style="text-align: center; padding: 20px;">Nenhuma ordem aguardando Diretoria.</td></tr>`;
+            }
+            if (!hasFinanceiroPending) {
+                document.getElementById('financeiroPendingListBody').innerHTML = `<tr><td colspan="${totalColsFinanceiroPending}" style="text-align: center; padding: 20px;">Nenhuma ordem aguardando Financeiro.</td></tr>`;
+            }
+            if (!hasPaymentPending) {
+                document.getElementById('paymentPendingListBody').innerHTML = `<tr><td colspan="${totalColsPaymentPending}" style="text-align: center; padding: 20px;">Nenhuma ordem aguardando pagamento.</td></tr>`;
+            }
+            if (!hasPaidOrders) {
+                document.getElementById('paidOrdersListBody').innerHTML = `<tr><td colspan="${totalColsPaidOrdersPartial}" style="text-align: center; padding: 20px;">Nenhuma ordem paga.</td></tr>`;
+            }
+            if (!hasPartialPaidOrders) {
+                document.getElementById('partialPaymentListBody').innerHTML = `<tr><td colspan="${totalColsPaidOrdersPartial}" style="text-align: center; padding: 20px;">Nenhuma ordem com pagamento parcial.</td></tr>`;
+            }
+            
+            // Re-apply filters for all tables after re-rendering to ensure consistency
+            filterTable('filterDiretoria', 'diretoriaPendingListBody');
+            filterTable('filterFinanceiro', 'financeiroPendingListBody');
+            filterTable('filterPaymentPending', 'paymentPendingListBody');
+            filterTable('filterPaid', 'paidOrdersListBody');
+            filterTable('filterPartialPaid', 'partialPaymentListBody');
+        }
+
+        // --- EXPORT FUNCTIONS ---
+        function getTableDataForExport(tableType) {
+            let data = [];
+            let headers = [];
+            let tableBodyId;
+            let currentOrdersToExport;
+            
+            if (tableType === 'diretoriaPending') {
+                tableBodyId = 'diretoriaPendingListBody';
+                currentOrdersToExport = orders.filter(o => o.status === 'Pendente');
+            } else if (tableType === 'financeiroPending') {
+                tableBodyId = 'financeiroPendingListBody';
+                currentOrdersToExport = orders.filter(o => o.status === 'Aguardando Financeiro');
+            } else if (tableType === 'paymentPending') {
+                tableBodyId = 'paymentPendingListBody';
+                currentOrdersToExport = orders.filter(o => o.status === 'Aguardando Pagamento');
+            } else if (tableType === 'paid') {
+                tableBodyId = 'paidOrdersListBody';
+                const filterStartDate = document.getElementById('filterPaidStartDate').value;
+                const filterEndDate = document.getElementById('filterPaidEndDate').value;
+                currentOrdersToExport = orders.filter(o => {
+                    if (o.status !== 'Paga') return false;
+                    if (!filterStartDate && !filterEndDate) return true;
+                    if (o.paymentCompletionDate) {
+                        const completionDate = new Date(o.paymentCompletionDate + 'T00:00:00');
+                        const start = filterStartDate ? new Date(filterStartDate + 'T00:00:00') : null;
+                        const end = filterEndDate ? new Date(filterEndDate + 'T00:00:00') : null;
+                        return ((!start || completionDate >= start) && (!end || completionDate <= end));
+                    }
+                    return false;
+                });
+            } else if (tableType === 'partialPaid') {
+                tableBodyId = 'partialPaymentListBody';
+                currentOrdersToExport = orders.filter(o => o.status === 'Pagamento Parcial');
+            }
+
+            // Construct headers based on what's displayed in the table
+            const tableElement = document.getElementById(tableBodyId).closest('table');
+            if (tableElement) {
+                headers = Array.from(tableElement.querySelectorAll('thead th')).map(th => th.textContent.trim());
+                // Remove 'Ações' column from headers if present
+                headers = headers.filter(h => h !== 'Ações' && h !== 'Adicionar Parcial' && h !== 'Pagar Total');
+            }
+
+            // Prepare data rows
+            currentOrdersToExport.forEach(order => {
+                const rowData = {};
+                if (tableType === 'diretoriaPending' || tableType === 'financeiroPending') {
+                    // Specific fields for these tables
+                    if (tableType === 'financeiroPending') {
+                        rowData['Data Aprovado Dir.'] = formatDate(order.approvalDateDiretoria);
+                    }
+                    monitoringTableColumns.forEach(col => {
+                        let value = order[col.id];
+                        if (col.id === 'paymentValue') {
+                            value = parseFloat(value || 0).toFixed(2).replace('.', ',');
+                        } else if (col.id === 'solicitant' && order.solicitant === 'Outros') {
+                            value = order.otherSolicitantName || '';
+                        }
+                        rowData[col.label] = value || '';
+                    });
+                    rowData['Data Geração'] = formatDate(order.generationDate);
+                } else if (tableType === 'paymentPending') {
+                    const totalPaid = (order.payments || []).reduce((sum, val) => sum + val, 0);
+                    rowData['Data Aprovado Fin.'] = formatDate(order.approvalDateFinanceiro);
+                    rowData['Valor Parcial (R\$)'] = `Pago: R\$ ${totalPaid.toFixed(2).replace('.', ',')} / Total: R\$ ${parseFloat(order.paymentValue).toFixed(2).replace('.', ',')}`;
+                    monitoringTableColumns.forEach(col => {
+                        let value = order[col.id];
+                        if (col.id === 'paymentValue') {
+                            value = parseFloat(value || 0).toFixed(2).replace('.', ',');
+                        } else if (col.id === 'solicitant' && order.solicitant === 'Outros') {
+                            value = order.otherSolicitantName || '';
+                        }
+                        rowData[col.label] = value || '';
+                    });
+                    rowData['Data Geração'] = formatDate(order.generationDate);
+                } else if (tableType === 'paid' || tableType === 'partialPaid') {
+                    const totalPaid = (order.payments || []).reduce((sum, val) => sum + val, 0);
+                    const paidValues = order.payments || [];
+                    rowData['Total Pago (R\$)'] = totalPaid.toFixed(2).replace('.', ',');
+                    rowData['Valor Pago 1'] = (paidValues[0] || 0).toFixed(2).replace('.', ',');
+                    rowData['Valor Pago 2'] = (paidValues[1] || 0).toFixed(2).replace('.', ',');
+                    rowData['Valor Pago 3'] = (paidValues[2] || 0).toFixed(2).replace('.', ',');
+                    rowData['Data Pagamento'] = formatDate(order.paymentCompletionDate);
+                    monitoringTableColumns.forEach(col => {
+                        let value = order[col.id];
+                        if (col.id === 'paymentValue') {
+                            value = parseFloat(value || 0).toFixed(2).replace('.', ',');
+                        } else if (col.id === 'solicitant' && order.solicitant === 'Outros') {
+                            value = order.otherSolicitantName || '';
+                        }
+                        rowData[col.label] = value || '';
+                    });
+                    rowData['Data Geração'] = formatDate(order.generationDate);
+                }
+
+                // Push row values in the order of headers
+                const orderedRow = headers.map(header => rowData[header]);
+                data.push(orderedRow);
+            });
+
+            return { headers, data };
+        }
+
+        function exportDataToPdf(tableType) {
+            const { headers, data } = getTableDataForExport(tableType);
+            if (data.length === 0) {
+                alert('Não há dados para exportar nesta tabela.');
+                return;
+            }
+
+            const doc = new jspdf.jsPDF('landscape'); // 'landscape' for wider tables
+            doc.text(`Relatório de Ordens - ${tableType.charAt(0).toUpperCase() + tableType.slice(1).replace(/([A-Z])/g, ' $1').trim()}`, 14, 15);
+            doc.autoTable({
+                head: [headers],
+                body: data,
+                startY: 20,
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [80, 180, 152] }, // Match table header color
+                margin: { top: 15, left: 14, right: 14, bottom: 15 }, // Adjusted margins
+                columnStyles: {
+                    // Example to auto-width for some columns
+                    0: { cellWidth: 'auto' },
+                    1: { cellWidth: 'auto' },
+                    // ... adjust as needed
+                },
+                didParseCell: function(data) {
+                    if (data.cell.section === 'body' && (data.column.index === headers.indexOf('Valor (R\$)') || data.column.index === headers.indexOf('Total Pago (R\$)') || data.column.index === headers.indexOf('Valor Parcial (R\$)'))) {
+                        data.cell.text = data.cell.text.map(txt => {
+                            if (txt.startsWith('R\$')) {
+                                return txt.replace('.', ','); // Ensure decimal is comma
+                            }
+                            return txt;
+                        });
+                    }
+                }
+            });
+            doc.save(`${tableType}_ordens.pdf`);
+        }
+
+        function exportDataToExcel(tableType) {
+            const { headers, data } = getTableDataForExport(tableType);
+            if (data.length === 0) {
+                alert('Não há dados para exportar nesta tabela.');
+                return;
+            }
+
+            const ws_data = [headers, ...data];
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Ordens");
+            XLSX.writeFile(wb, `${tableType}_ordens.xlsx`);
+        }
+
+        function updateDeleteButtonText() {
+            const filterStartDate = document.getElementById('filterPaidStartDate').value;
+            const filterEndDate = document.getElementById('filterPaidEndDate').value;
+            const clearDbButton = document.getElementById('clearDbButton');
+
+            if (filterStartDate || filterEndDate) {
+                let dateRangeText = '';
+                if (filterStartDate && filterEndDate) {
+                    dateRangeText = ` entre ${formatDate(filterStartDate)} e ${formatDate(filterEndDate)}`;
+                } else if (filterStartDate) {
+                    dateRangeText = ` a partir de ${formatDate(filterStartDate)}`;
+                } else { // filterEndDate only
+                    dateRangeText = ` até ${formatDate(filterEndDate)}`;
+                }
+                clearDbButton.textContent = `Excluir Ordens Pagas${dateRangeText}`;
+            } else {
+                clearDbButton.textContent = 'Excluir TODOS os dados do sistema';
+            }
+        }
+
+        async function clearDatabase() {
+            let fullClearConfirmed = false;
+            const filterStartDate = document.getElementById('filterPaidStartDate').value;
+            const filterEndDate = document.getElementById('filterPaidEndDate').value;
+
+            if (filterStartDate || filterEndDate) {
+                if (confirm('Tem certeza que deseja EXCLUIR as ordens pagas DENTRO do período filtrado? Esta ação é irreversível!')) {
+                    const ordersToDelete = orders.filter(order => {
+                        if (order.status !== 'Paga') {
+                            return false; // Only consider 'Paga' orders
+                        }
+                        const paymentCompletionDate = new Date(order.paymentCompletionDate + 'T00:00:00');
+                        const start = filterStartDate ? new Date(filterStartDate + 'T00:00:00') : null;
+                        const end = filterEndDate ? new Date(filterEndDate + 'T00:00:00') : null;
+                        return ((!start || paymentCompletionDate >= start) && (!end || paymentCompletionDate <= end));
+                    });
+
+                    if (ordersToDelete.length > 0) {
+                        for (const order of ordersToDelete) {
+                            await deleteOrder(order.id); // Call deleteOrder for each
+                        }
+                        alert('As ordens pagas no período filtrado foram excluídas com sucesso!');
+                    } else {
+                        alert('Nenhuma ordem paga encontrada no período filtrado para exclusão.');
+                    }
+                }
+            } else {
+                // No date filter active, perform full database clear
+                if (confirm('Tem certeza que deseja EXCLUIR TODOS os dados do sistema? Esta ação é irreversível!')) {
+                    if (confirm('ATENÇÃO: VOCÊ ESTÁ PRESTES A APAGAR TODOS OS DADOS SALVOS. ESTA AÇÃO NÃO PODE SER DESFEITA. DESEJA CONTINUAR?')) {
+                        try {
+                            const response = await fetch(APPS_SCRIPT_URL, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'clearAll' })
+                            });
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            const result = await response.json();
+                            if (result.success) {
+                                alert('Todos os dados foram excluídos com sucesso!');
+                                fullClearConfirmed = true;
+                            } else {
+                                alert(`Falha ao excluir todos os dados: ${result.message}`);
+                            }
+                        } catch (error) {
+                            console.error("Error clearing database:", error);
+                            alert("Erro de comunicação com o servidor ao excluir todos os dados.");
+                        } finally {
+                            await loadOrdersFromCloud(); // Reload to reflect empty state
+                            renderOrderLists();
+                            clearForm();
+                            if (fullClearConfirmed) {
+                                logout(); // Logout only if full clear was successful
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Inicialização ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('generationDate').value = getTodayLocalISO();
+            
+            // Para este sistema de login simplificado, os dados só são carregados após o login bem-sucedido.
+            // No carregamento inicial, apenas renderizamos os cabeçalhos e as listas vazias.
+            renderTableHeaders();
+            renderOrderLists(); // Isso mostrará "Nenhuma ordem..." inicialmente
+            
+            togglePaymentTypeFields(); // Garante a exibição correta dos campos de pagamento
+            toggleOtherSolicitantField(); // Garante a exibição correta do campo 'Outros Solicitantes'
+            updateDeleteButtonText(); // Define o texto inicial do botão de exclusão
+        });
+    </script>
+</body>
+</html>
